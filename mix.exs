@@ -41,7 +41,10 @@ defmodule AshMqtt.MixProject do
     [
       {:ash, "~> 3.24"},
       {:spark, "~> 2.6"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      # Optional: pulled in only when the operator wants the runtime
+      # client. The DSL + broker-config generators don't need it.
+      {:emqtt, "~> 1.14", optional: true}
     ]
   end
 end

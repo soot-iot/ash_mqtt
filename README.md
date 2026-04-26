@@ -100,13 +100,63 @@ mix ash_mqtt.gen.emqx_config --out priv/broker/emqx.json \
 Pushing the EMQX bundle to a live broker (`POST /api/v5/...`) is left to
 the operator; the renderers stop at producing the artifacts.
 
+## Runtime
+
+`AshMqtt.Runtime.Client` is a `GenServer` that owns an MQTT
+connection, publishes / subscribes, and tracks pending request/reply
+correlations. It runs on top of any module implementing the
+`AshMqtt.Runtime.Transport` behavior. Two implementations ship:
+
+| transport                              | use                                                      |
+|----------------------------------------|----------------------------------------------------------|
+| `AshMqtt.Runtime.Transport.EMQTT`      | production; talks to a real broker via the `:emqtt` lib |
+| `AshMqtt.Runtime.Transport.Test`       | in-memory; tests record published messages + inject inbound deliveries |
+
+```elixir
+{:ok, client} =
+  AshMqtt.Runtime.Client.start_link(
+    transport: AshMqtt.Runtime.Transport.EMQTT,
+    transport_opts: [
+      host: ~c"broker.example.com",
+      port: 8883,
+      ssl: true,
+      ssl_opts: [
+        certfile: "priv/pki/client_chain.pem",
+        keyfile:  "priv/pki/client_key.pem",
+        cacertfile: "priv/pki/trust_bundle.pem",
+        verify: :verify_peer
+      ]
+    ]
+  )
+
+# Fire-and-forget
+:ok = AshMqtt.Runtime.Client.publish(client, "topic/up", "hello")
+
+# Request / reply (MQTT 5 correlation)
+{:ok, reply} =
+  AshMqtt.Runtime.Client.invoke(client,
+    "tenants/acme/devices/d1/cmd/read_config",
+    payload: <<>>, timeout: 5_000)
+
+# Server-side dispatcher: the handler may return :ok / {:reply, body} /
+# {:reply, body, opts}. {:reply, _} publishes the body to the request's
+# response_topic with the same correlation_data.
+:ok =
+  AshMqtt.Runtime.Client.dispatch(client,
+    "tenants/+/devices/+/cmd/reboot",
+    fn msg -> handle_reboot(msg) end)
+```
+
+`:emqtt` is an `optional: true` dependency — operators who only use
+the DSL + broker-config generators don't pull it (and its
+`:quicer` C-NIF) into their build.
+
 ## Out of scope (v0.1)
 
-* **Runtime MQTT client.** The `action` DSL captures the request/response
-  declaration but no client is wired up here; runtime invocation will
-  land in a follow-up that picks an MQTT 5 client.
 * Topic alias optimisation, custom QoS upgrade/downgrade flows, sticky
   session management beyond MQTT 5 defaults.
+* Reconnect / backoff policy in the runtime client. Operators wrap the
+  GenServer in a `Supervisor` for restart; smarter retry comes later.
 * Live EMQX dashboard push (the renderer's output is REST-shaped, but
   the HTTP client lives in operator code).
 
@@ -116,8 +166,14 @@ the operator; the renderers stop at producing the artifacts.
 mix test
 ```
 
-47 tests + 4 doctests across topic helpers, DSL parse + Info,
+60 tests + 4 doctests across topic helpers, DSL parse + Info,
 broker-config dispatch, Mosquitto ACL rendering (incl. all four ACL
 policies), EMQX JSON rendering (incl. `to_json/2` round-trip and `:opaque`
-skip), shadow-DSL expansion + direction conventions, and both mix tasks
-end-to-end.
+skip), shadow-DSL expansion + direction conventions, both mix tasks
+end-to-end, and the runtime layer over the in-memory `Test` transport
+(publish, invoke happy path with correlation roundtrip + auto-subscribe
+to the response topic, invoke timeout, late-reply silent drop, dispatch
+to a handler with `{:reply, body}` round trip back to the request's
+response_topic, handler returning `:ok` publishes nothing, handler
+exception is caught and the client stays alive, MQTT topic-filter
+wildcards including `+` and `#`).
