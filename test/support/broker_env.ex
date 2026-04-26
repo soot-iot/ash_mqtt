@@ -43,22 +43,26 @@ defmodule AshMqtt.Test.BrokerEnv do
   end
 
   @doc """
-  Block until the broker accepts TCP connections. Raises with a hint to
-  start the docker-compose stack if it does not come up in time.
+  Block until the broker accepts a full MQTT 5 CONNECT (not just TCP).
+  Raises with a hint to start the docker-compose stack if it does not
+  come up in time.
+
+  EMQX in particular opens its TCP listener several seconds before it
+  is ready to handle MQTT, so a TCP-only probe can race the broker's
+  boot sequence and the runtime client then sees `:tcp_closed`.
   """
   @spec await_broker!(String.t(), pos_integer(), pos_integer()) :: :ok
-  def await_broker!(host, port, deadline_ms \\ 15_000) do
+  def await_broker!(host, port, deadline_ms \\ 30_000) do
     deadline = System.monotonic_time(:millisecond) + deadline_ms
-    do_wait(String.to_charlist(host), port, deadline)
+    do_wait(host, port, deadline)
   end
 
   defp do_wait(host, port, deadline) do
-    case :gen_tcp.connect(host, port, [:binary, active: false], 500) do
-      {:ok, sock} ->
-        :gen_tcp.close(sock)
+    case probe_mqtt(host, port) do
+      :ok ->
         :ok
 
-      {:error, _} ->
+      {:error, _reason} ->
         if System.monotonic_time(:millisecond) >= deadline do
           raise """
           MQTT broker not reachable at #{host}:#{port} after waiting for it to come up.
@@ -71,9 +75,45 @@ defmodule AshMqtt.Test.BrokerEnv do
           to select emqx/mosquitto).
           """
         else
-          Process.sleep(200)
+          Process.sleep(250)
           do_wait(host, port, deadline)
         end
+    end
+  end
+
+  defp probe_mqtt(host, port) do
+    Process.flag(:trap_exit, true)
+
+    opts = [
+      host: String.to_charlist(host),
+      port: port,
+      proto_ver: :v5,
+      clean_start: true,
+      connect_timeout: 2,
+      clientid: "ash_mqtt_probe_" <> rand_hex()
+    ]
+
+    with {:ok, pid} <- :emqtt.start_link(opts),
+         {:ok, _} <- :emqtt.connect(pid) do
+      _ = :emqtt.disconnect(pid)
+      drain_exits(pid)
+      :ok
+    else
+      {:error, _} = err ->
+        drain_exits(:any)
+        err
+    end
+  catch
+    :exit, reason ->
+      drain_exits(:any)
+      {:error, reason}
+  end
+
+  defp drain_exits(_pid) do
+    receive do
+      {:EXIT, _, _} -> drain_exits(:any)
+    after
+      0 -> :ok
     end
   end
 

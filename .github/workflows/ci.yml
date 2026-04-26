@@ -57,8 +57,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mix-
       - run: mix deps.get
-      - name: Start MQTT brokers
-        run: docker compose -f docker/docker-compose.yml up -d ${{ matrix.broker }}
+      - name: Start MQTT broker
+        run: docker compose -f docker/docker-compose.yml up -d --wait ${{ matrix.broker }}
       - run: mix test --only integration
       - name: Broker logs on failure
         if: failure()
