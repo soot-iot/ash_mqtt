@@ -177,3 +177,42 @@ to a handler with `{:reply, body}` round trip back to the request's
 response_topic, handler returning `:ok` publishes nothing, handler
 exception is caught and the client stays alive, MQTT topic-filter
 wildcards including `+` and `#`).
+
+### Integration tests (optional, opt-in)
+
+A second suite under `test/integration/` exercises the runtime client
+against a real MQTT 5 broker via the `:emqtt`-backed transport. It is
+tagged `:integration` and excluded by default, so plain `mix test`
+never starts a broker.
+
+Bring the brokers up locally with the bundled compose file:
+
+```sh
+docker compose -f docker/docker-compose.yml up -d
+```
+
+This runs `emqx/emqx:5.8` on `127.0.0.1:1883` and
+`eclipse-mosquitto:2.0` on `127.0.0.1:1884`, both with anonymous MQTT 5
+enabled.
+
+Run the suite against either broker:
+
+```sh
+MQTT_BROKER=emqx       mix test --only integration
+MQTT_BROKER=mosquitto  mix test --only integration
+```
+
+Override `MQTT_HOST`, `MQTT_EMQX_PORT`, `MQTT_MOSQUITTO_PORT` to point
+at a non-local stack.
+
+The integration suite covers connect/disconnect lifecycle, connect
+failure to a closed port, QoS 0 and QoS 1 publish→subscribe delivery,
+single-level (`+`) and multi-level (`#`) wildcard subscriptions,
+retained-message delivery to a late subscriber, MQTT 5 property
+round-trip (Content-Type), and the full `invoke` ↔ `dispatch`
+request/reply flow including timeout, two concurrent invokes routed by
+correlation-data, handler returning `:ok`, and a raising handler
+leaving both clients alive.
+
+CI runs the unit suite on every push and a separate matrix job per
+broker for the integration suite (see `.github/workflows/ci.yml`).
