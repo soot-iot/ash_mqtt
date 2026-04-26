@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "28.3.2"
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix test
+
+  integration:
+    name: Integration (${{ matrix.broker }})
+    runs-on: ubuntu-latest
+    needs: unit
+    env:
+      MIX_ENV: test
+      MQTT_BROKER: ${{ matrix.broker }}
+    strategy:
+      fail-fast: false
+      matrix:
+        broker: [emqx, mosquitto]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18.4"
+          otp-version: "28.3.2"
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+      - run: mix deps.get
+      - name: Start MQTT brokers
+        run: docker compose -f docker/docker-compose.yml up -d ${{ matrix.broker }}
+      - run: mix test --only integration
+      - name: Broker logs on failure
+        if: failure()
+        run: docker compose -f docker/docker-compose.yml logs ${{ matrix.broker }}
