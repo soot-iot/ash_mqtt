@@ -12,7 +12,7 @@ defmodule AshMqtt.Runtime.Transport.EMQTT do
       AshMqtt.Runtime.Transport.EMQTT.connect([
         host: ~c"broker.example.com",
         port: 8883,
-        protocol_version: :v5,
+        proto_ver: :v5,
         ssl: true,
         ssl_opts: [
           certfile: "priv/pki/client_chain.pem",
@@ -51,7 +51,7 @@ defmodule AshMqtt.Runtime.Transport.EMQTT do
 
     opts =
       opts
-      |> Keyword.put_new(:protocol_version, :v5)
+      |> Keyword.put_new(:proto_ver, :v5)
       |> Keyword.put(:msg_handler, handler)
 
     with {:ok, pid} <- :emqtt.start_link(opts),
@@ -96,10 +96,10 @@ defmodule AshMqtt.Runtime.Transport.EMQTT do
 
   defp build_props(%Message{} = msg) do
     %{}
-    |> maybe_put("Content-Type", msg.content_type)
-    |> maybe_put("Response-Topic", msg.response_topic)
-    |> maybe_put("Correlation-Data", msg.correlation_data)
-    |> maybe_put("User-Property", flatten_user_props(msg.user_properties))
+    |> maybe_put(:"Content-Type", msg.content_type)
+    |> maybe_put(:"Response-Topic", msg.response_topic)
+    |> maybe_put(:"Correlation-Data", msg.correlation_data)
+    |> maybe_put(:"User-Property", flatten_user_props(msg.user_properties))
   end
 
   defp maybe_put(map, _, nil), do: map
@@ -116,14 +116,18 @@ defmodule AshMqtt.Runtime.Transport.EMQTT do
       payload: payload,
       qos: Map.get(msg, :qos),
       retain: Map.get(msg, :retain),
-      content_type: Map.get(properties, "Content-Type"),
-      response_topic: Map.get(properties, "Response-Topic"),
-      correlation_data: Map.get(properties, "Correlation-Data"),
-      user_properties: Map.new(Map.get(properties, "User-Property", []))
+      content_type: nil_or_string(Map.get(properties, :"Content-Type")),
+      response_topic: nil_or_string(Map.get(properties, :"Response-Topic")),
+      correlation_data: Map.get(properties, :"Correlation-Data"),
+      user_properties: Map.new(Map.get(properties, :"User-Property", []))
     }
   end
 
   defp normalise(:ok), do: :ok
   defp normalise({:ok, _}), do: :ok
   defp normalise({:error, _} = err), do: err
+
+  defp nil_or_string(nil), do: nil
+  defp nil_or_string(bin) when is_binary(bin), do: bin
+  defp nil_or_string(other), do: to_string(other)
 end
