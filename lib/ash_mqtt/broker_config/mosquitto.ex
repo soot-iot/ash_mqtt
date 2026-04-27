@@ -51,10 +51,7 @@ defmodule AshMqtt.BrokerConfig.Mosquitto do
   def render(resources, opts \\ []) when is_list(resources) do
     header = Keyword.get(opts, :header, default_header(resources))
 
-    body =
-      resources
-      |> Enum.map(&resource_block/1)
-      |> Enum.join("\n")
+    body = Enum.map_join(resources, "\n", &resource_block/1)
 
     header <> body <> "\n"
   end
@@ -118,7 +115,9 @@ defmodule AshMqtt.BrokerConfig.Mosquitto do
     base = emit_acl_lines(filter, acl, :readwrite, %{direction: :bidirectional})
 
     if reply? do
-      base <> "\n" <> emit_acl_lines(filter <> "/reply/+", acl, :readwrite, %{direction: :bidirectional})
+      base <>
+        "\n" <>
+        emit_acl_lines(filter <> "/reply/+", acl, :readwrite, %{direction: :bidirectional})
     else
       base
     end

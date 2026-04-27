@@ -69,8 +69,7 @@ defmodule AshMqtt.Resource do
         doc: "Per-topic payload format. Defaults to the section-level payload_format."
       ],
       acl: [
-        type:
-          {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
+        type: {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
         doc: "Per-topic ACL override. Defaults to the section-level acl."
       ]
     ]
@@ -94,7 +93,8 @@ defmodule AshMqtt.Resource do
       reply: [
         type: :boolean,
         default: false,
-        doc: "If true, the broker generates a response topic per request and the client correlates."
+        doc:
+          "If true, the broker generates a response topic per request and the client correlates."
       ],
       timeout: [
         type: :pos_integer,
@@ -133,8 +133,7 @@ defmodule AshMqtt.Resource do
         doc: "Section-level payload format default."
       ],
       acl: [
-        type:
-          {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
+        type: {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
         default: :tenant_isolated,
         doc: "Section-level ACL policy default."
       ]

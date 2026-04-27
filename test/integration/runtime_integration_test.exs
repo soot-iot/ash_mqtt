@@ -74,7 +74,7 @@ defmodule AshMqtt.Runtime.IntegrationTest do
           transport: EMQTTTransport,
           transport_opts: [
             host: String.to_charlist(ctx.host),
-            port: ctx.port + 30000,
+            port: ctx.port + 30_000,
             connect_timeout: 1,
             clientid: "ash_mqtt_test_unreachable_" <> BrokerEnv.rand_hex()
           ]
@@ -116,7 +116,11 @@ defmodule AshMqtt.Runtime.IntegrationTest do
       topic = ctx.prefix <> "/events"
       test_pid = self()
 
-      :ok = Client.dispatch(sub, topic, fn msg -> send(test_pid, {:got, msg}); :ok end)
+      :ok =
+        Client.dispatch(sub, topic, fn msg ->
+          send(test_pid, {:got, msg})
+          :ok
+        end)
 
       :ok = Client.publish(pub, topic, "evt", qos: 0)
 
@@ -130,7 +134,11 @@ defmodule AshMqtt.Runtime.IntegrationTest do
       filter = ctx.prefix <> "/devices/+/up"
       test_pid = self()
 
-      :ok = Client.dispatch(sub, filter, fn msg -> send(test_pid, {:got, msg}); :ok end)
+      :ok =
+        Client.dispatch(sub, filter, fn msg ->
+          send(test_pid, {:got, msg})
+          :ok
+        end)
 
       :ok = Client.publish(pub, ctx.prefix <> "/devices/d1/up", "1", qos: 1)
       :ok = Client.publish(pub, ctx.prefix <> "/devices/d2/up", "2", qos: 1)
@@ -146,7 +154,11 @@ defmodule AshMqtt.Runtime.IntegrationTest do
       filter = ctx.prefix <> "/#"
       test_pid = self()
 
-      :ok = Client.dispatch(sub, filter, fn msg -> send(test_pid, {:got, msg}); :ok end)
+      :ok =
+        Client.dispatch(sub, filter, fn msg ->
+          send(test_pid, {:got, msg})
+          :ok
+        end)
 
       :ok = Client.publish(pub, ctx.prefix <> "/a/b/c", "deep", qos: 1)
       :ok = Client.publish(pub, ctx.prefix <> "/x", "shallow", qos: 1)
@@ -165,7 +177,12 @@ defmodule AshMqtt.Runtime.IntegrationTest do
 
       sub = start_client!(ctx)
       test_pid = self()
-      :ok = Client.dispatch(sub, topic, fn msg -> send(test_pid, {:got, msg}); :ok end)
+
+      :ok =
+        Client.dispatch(sub, topic, fn msg ->
+          send(test_pid, {:got, msg})
+          :ok
+        end)
 
       assert_receive {:got, %Message{topic: ^topic, payload: "retained", retain: true}}, 5_000
 
@@ -181,7 +198,12 @@ defmodule AshMqtt.Runtime.IntegrationTest do
 
       topic = ctx.prefix <> "/req"
       test_pid = self()
-      :ok = Client.dispatch(sub, topic, fn msg -> send(test_pid, {:got, msg}); :ok end)
+
+      :ok =
+        Client.dispatch(sub, topic, fn msg ->
+          send(test_pid, {:got, msg})
+          :ok
+        end)
 
       :ok =
         Client.publish(pub, topic, "{\"k\":1}",
@@ -230,8 +252,11 @@ defmodule AshMqtt.Runtime.IntegrationTest do
           {:reply, "ack:" <> p}
         end)
 
-      task_a = Task.async(fn -> Client.invoke(caller, req_topic, payload: "A", timeout: 5_000) end)
-      task_b = Task.async(fn -> Client.invoke(caller, req_topic, payload: "B", timeout: 5_000) end)
+      task_a =
+        Task.async(fn -> Client.invoke(caller, req_topic, payload: "A", timeout: 5_000) end)
+
+      task_b =
+        Task.async(fn -> Client.invoke(caller, req_topic, payload: "B", timeout: 5_000) end)
 
       assert {:ok, %Message{payload: a}} = Task.await(task_a, 6_000)
       assert {:ok, %Message{payload: b}} = Task.await(task_b, 6_000)

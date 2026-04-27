@@ -13,7 +13,15 @@ defmodule AshMqtt.MixProject do
       consolidate_protocols: Mix.env() != :test,
       deps: deps(),
       description: description(),
-      package: package()
+      package: package(),
+      aliases: aliases(),
+      dialyzer: [
+        plt_add_apps: [:mix, :ex_unit, :public_key, :crypto, :ssl],
+        plt_core_path: "priv/plts",
+        plt_local_path: "priv/plts",
+        ignore_warnings: ".dialyzer_ignore.exs",
+        list_unused_filters?: true
+      ]
     ]
   end
 
@@ -37,6 +45,13 @@ defmodule AshMqtt.MixProject do
     ]
   end
 
+  defp aliases do
+    [
+      format: "format --migrate",
+      credo: "credo --strict"
+    ]
+  end
+
   defp deps do
     [
       {:ash, "~> 3.24"},
@@ -45,7 +60,14 @@ defmodule AshMqtt.MixProject do
       # Optional: pulled in only when the operator wants the runtime
       # client. The DSL + broker-config generators don't need it.
       {:emqtt, "~> 1.14", optional: true},
-      {:igniter, "~> 0.6", optional: true}
+      {:igniter, "~> 0.6", optional: true},
+
+      # Dev / test
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.34", only: [:dev], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false}
     ]
   end
 end

@@ -58,8 +58,8 @@ defmodule AshMqtt.BrokerConfig.MosquittoTest do
         end
 
         mqtt do
-          acl :public_subscribe
-          topic "broadcast/:topic", as: :broadcast, direction: :outbound
+          acl(:public_subscribe)
+          topic("broadcast/:topic", as: :broadcast, direction: :outbound)
         end
       end
 

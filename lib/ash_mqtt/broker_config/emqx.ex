@@ -176,9 +176,14 @@ defmodule AshMqtt.BrokerConfig.EMQX do
     fmt = Info.effective_payload_format(resource, action)
 
     case fmt do
-      :opaque -> []
-      :arrow_ipc -> []
-      _ -> [validation_rule(resource, AshMqtt.Topic.render(action.topic, :emqx), fmt, action.name)]
+      :opaque ->
+        []
+
+      :arrow_ipc ->
+        []
+
+      _ ->
+        [validation_rule(resource, AshMqtt.Topic.render(action.topic, :emqx), fmt, action.name)]
     end
   end
 

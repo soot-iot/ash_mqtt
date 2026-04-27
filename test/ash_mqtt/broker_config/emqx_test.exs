@@ -37,7 +37,7 @@ defmodule AshMqtt.BrokerConfig.EMQXTest do
 
     test "produces a :rules entry per non-opaque topic with a SQL body" do
       %{rules: rules} = EMQX.render([Device])
-      assert length(rules) > 0
+      assert rules != []
 
       Enum.each(rules, fn rule ->
         assert rule.enable == true
@@ -61,8 +61,8 @@ defmodule AshMqtt.BrokerConfig.EMQXTest do
         end
 
         mqtt do
-          payload_format :opaque
-          topic "blob/:device_id", as: :blob
+          payload_format(:opaque)
+          topic("blob/:device_id", as: :blob)
         end
       end
 
