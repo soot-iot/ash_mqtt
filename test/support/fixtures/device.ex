@@ -22,25 +22,28 @@ defmodule AshMqtt.Test.Fixtures.Device do
   end
 
   mqtt do
-    qos 1
-    retain false
-    payload_format :json
-    acl :tenant_isolated
+    qos(1)
+    retain(false)
+    payload_format(:json)
+    acl(:tenant_isolated)
 
-    topic "tenants/:tenant_id/devices/:device_id/cmd",
+    topic("tenants/:tenant_id/devices/:device_id/cmd",
       as: :cmd_in,
       direction: :inbound
+    )
 
-    topic "tenants/:tenant_id/devices/:device_id/up",
+    topic("tenants/:tenant_id/devices/:device_id/up",
       as: :events_out,
       direction: :outbound,
       qos: 0
+    )
 
-    topic "tenants/:tenant_id/devices/:device_id/state",
+    topic("tenants/:tenant_id/devices/:device_id/state",
       as: :state,
       direction: :outbound,
       retain: true,
       payload_format: :cbor
+    )
 
     action :reboot, topic: "tenants/:tenant_id/devices/:device_id/cmd/reboot"
 

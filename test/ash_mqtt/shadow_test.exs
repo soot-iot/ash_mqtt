@@ -52,7 +52,13 @@ defmodule AshMqtt.ShadowTest do
 
     test "as: prefix is honoured in the topic short names", %{topics: topics} do
       names = Enum.map(topics, & &1.as) |> Enum.sort()
-      assert names == [:device_shadow_delta, :device_shadow_desired, :device_shadow_get, :device_shadow_reported]
+
+      assert names == [
+               :device_shadow_delta,
+               :device_shadow_desired,
+               :device_shadow_get,
+               :device_shadow_reported
+             ]
     end
   end
 
@@ -70,7 +76,7 @@ defmodule AshMqtt.ShadowTest do
           end
 
           mqtt_shadow do
-            qos 1
+            qos(1)
           end
         end
       end

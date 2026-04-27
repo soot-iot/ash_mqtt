@@ -91,8 +91,8 @@ defmodule AshMqtt.ResourceTest do
           end
 
           mqtt do
-            payload_format :nonexistent
-            topic "a/b", as: :a
+            payload_format(:nonexistent)
+            topic("a/b", as: :a)
           end
         end
       end
@@ -111,8 +111,8 @@ defmodule AshMqtt.ResourceTest do
           end
 
           mqtt do
-            qos 7
-            topic "a/b", as: :a
+            qos(7)
+            topic("a/b", as: :a)
           end
         end
       end

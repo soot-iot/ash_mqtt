@@ -50,8 +50,7 @@ defmodule AshMqtt.Shadow do
         default: :json
       ],
       acl: [
-        type:
-          {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
+        type: {:one_of, [:tenant_isolated, :device_owned, :public_subscribe, :public_publish]},
         default: :tenant_isolated
       ],
       desired_attributes: [

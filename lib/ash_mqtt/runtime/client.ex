@@ -86,8 +86,10 @@ defmodule AshMqtt.Runtime.Client do
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.get(opts, :name)
-    if name, do: GenServer.start_link(__MODULE__, opts, name: name),
-       else: GenServer.start_link(__MODULE__, opts)
+
+    if name,
+      do: GenServer.start_link(__MODULE__, opts, name: name),
+      else: GenServer.start_link(__MODULE__, opts)
   end
 
   @doc "Publish a message; fire and forget."
@@ -198,9 +200,10 @@ defmodule AshMqtt.Runtime.Client do
   @impl true
   def handle_info({:ash_mqtt_msg, %Message{} = msg}, state) do
     state =
-      cond do
-        match_pending?(msg, state) -> route_reply(msg, state)
-        true -> route_to_handler(msg, state)
+      if match_pending?(msg, state) do
+        route_reply(msg, state)
+      else
+        route_to_handler(msg, state)
       end
 
     {:noreply, state}

@@ -25,7 +25,7 @@ defmodule AshMqtt.Test.BrokerEnv do
     case System.get_env("MQTT_BROKER", "emqx") do
       "emqx" -> :emqx
       "mosquitto" -> :mosquitto
-      other -> raise "Unknown MQTT_BROKER #{inspect(other)}; expected \"emqx\" or \"mosquitto\""
+      other -> raise ~s|Unknown MQTT_BROKER #{inspect(other)}; expected "emqx" or "mosquitto"|
     end
   end
 
