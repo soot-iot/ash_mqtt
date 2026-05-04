@@ -32,12 +32,26 @@ defmodule AshMqtt.BrokerConfig.EMQX do
   alias AshMqtt.BrokerConfig
   alias AshMqtt.Resource.{Action, Info, Topic}
 
-  @doc "Combined config bundle: %{acl: [...], rules: [...]}."
+  @doc """
+  Combined config bundle: `%{acl: [...], rules: [...]}`.
+
+  ## Determinism
+
+  Both lists are sorted deterministically by content (ACL by
+  `{action, topic, username, clientid}`; rules by `name`) so the
+  output is byte-stable regardless of the order the operator passed
+  resources in. This is what makes the CI git-diff drift check
+  meaningful.
+  """
   @spec render([module()], keyword()) :: %{acl: list(map()), rules: list(map())}
   def render(resources, opts \\ []) when is_list(resources) do
     %{
-      acl: Enum.flat_map(resources, &resource_acl/1) ++ Keyword.get(opts, :extra_acl, []),
-      rules: Enum.flat_map(resources, &resource_rules/1) ++ Keyword.get(opts, :extra_rules, [])
+      acl:
+        (Enum.flat_map(resources, &resource_acl/1) ++ Keyword.get(opts, :extra_acl, []))
+        |> sort_acl(),
+      rules:
+        (Enum.flat_map(resources, &resource_rules/1) ++ Keyword.get(opts, :extra_rules, []))
+        |> sort_rules()
     }
   end
 
@@ -48,6 +62,26 @@ defmodule AshMqtt.BrokerConfig.EMQX do
     |> render(opts)
     |> Jason.encode!(pretty: true)
   end
+
+  # ACL entries don't all have the same keys (some carry :username,
+  # some :clientid). Sort by the union of fields that affect intent,
+  # falling back to the rendered comment for tiebreaks.
+  defp sort_acl(acls) do
+    Enum.sort_by(acls, fn acl ->
+      {
+        Map.get(acl, :action, ""),
+        Map.get(acl, :topic, ""),
+        Map.get(acl, :username, ""),
+        Map.get(acl, :clientid, ""),
+        Map.get(acl, :permission, ""),
+        Map.get(acl, :comment, "")
+      }
+    end)
+  end
+
+  # Rule names are namespaced by `inspect(resource).<suffix>`, so
+  # they're unique per (resource, topic-or-action) pair.
+  defp sort_rules(rules), do: Enum.sort_by(rules, &Map.get(&1, :name, ""))
 
   defp resource_acl(resource) do
     topics_acl = Enum.flat_map(BrokerConfig.topics(resource), &topic_acl(resource, &1))
