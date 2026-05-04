@@ -89,5 +89,17 @@ defmodule AshMqtt.BrokerConfig.EMQXTest do
       assert is_list(decoded["acl"])
       assert is_list(decoded["rules"])
     end
+
+    test "is byte-stable on repeated render of the same input" do
+      a = EMQX.to_json([Device, DeviceShadow])
+      b = EMQX.to_json([Device, DeviceShadow])
+      assert a == b
+    end
+
+    test "is byte-stable regardless of operator-controlled resource order" do
+      a = EMQX.to_json([Device, DeviceShadow])
+      b = EMQX.to_json([DeviceShadow, Device])
+      assert a == b
+    end
   end
 end
